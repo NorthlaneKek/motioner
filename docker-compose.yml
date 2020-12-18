@@ -1,0 +1,41 @@
+version: '3.1'
+services:
+  app:
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    links:
+      - database
+  database:
+    container_name: database
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=alarms
+
+  mosquitto:
+    image: eclipse-mosquitto
+    ports:
+      - 1883:1883
+      - 8883:8883
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    command: server --address ":443" /data
+    ports:
+      - "443:443"
+    environment:
+      MINIO_ACCESS_KEY: "minio"
+      MINIO_SECRET_KEY: "minio123"
+    volumes:
+      - /tmp/minio/data:/data
+      - /tmp/.minio:/root/.minio
