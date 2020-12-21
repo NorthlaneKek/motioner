@@ -1,6 +1,8 @@
 package com.example.motioner.infrastructure;
 
+import org.springframework.http.ResponseEntity;
+
 public interface FileManager {
 
-    public void getFile(String filename) throws Exception;
+    public ResponseEntity<byte[]> getFile(String s, String filename, String range) throws Exception;
 }

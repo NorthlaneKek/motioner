@@ -17,7 +17,9 @@ public class DeviceController {
     private final DeviceRepository repository;
 
     @Autowired
-    public DeviceController(DeviceRepository repo) {this.repository = repo;}
+    public DeviceController(DeviceRepository repo) {
+        this.repository = repo;
+    }
 
     @GetMapping("/devices")
     public List<Device> index() {

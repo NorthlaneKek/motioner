@@ -2,11 +2,13 @@ package com.example.motioner;
 
 import com.example.motioner.infrastructure.FileManager;
 import com.example.motioner.infrastructure.MinioFileManager;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 @RestController
+@RequestMapping("/video")
 public class VideoController {
 
     private FileManager fm;
@@ -15,12 +17,10 @@ public class VideoController {
         fm = manager;
     }
 
-    @GetMapping("/video")
-    public void test(@PathVariable String filename) {
-        try {
-            fm.getFile("f68fd18c-5a82-4b82-bc6b-88849a4fc038_alarm_19.12.2020 20:35:28.h264");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    @GetMapping("/stream/{filename}/{filetype}")
+    public Mono<ResponseEntity<byte[]>> streamVideo(@RequestHeader(value = "Range", required = false) String httpRangeList,
+                                                    @PathVariable("filename") String filename,
+                                                    @PathVariable("filetype") String fileType) throws Exception {
+        return Mono.just(fm.getFile(filename, fileType, httpRangeList));
     }
 }
