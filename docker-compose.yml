@@ -5,6 +5,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      POSTGRES_URL: "jdbc:postgresql://database:5432/alarms"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "changeme"
+
+      MQTT_BROKER_HOST: "mosquitto"
+      MQTT_BROKER_PORT: "1883"
+      MQTT_BROKER_TOPICS: "raspberry/main"
+
+      MINIO_HOST: "https://minio"
+      MINIO_PORT: "443"
+      MINIO_ACCESS_KEY: "minio"
+      MINIO_SECRET_KEY: "minio123"
+      MINIO_BUCKET: "raspberrycamera"
     ports:
       - "8080:8080"
     depends_on:

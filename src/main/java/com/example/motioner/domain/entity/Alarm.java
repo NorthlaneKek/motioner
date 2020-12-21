@@ -35,8 +35,8 @@ public class Alarm {
         this.timestamp = timestamp;
     }
 
-    public String getId() {
-        return id.toString();
+    public UUID getId() {
+        return id;
     }
 
     public String getPlace() {
@@ -45,6 +45,10 @@ public class Alarm {
 
     public String getFilename() {
         return filename;
+    }
+
+    public String getType() {
+        return type;
     }
 
     public Long getTimestamp() {
