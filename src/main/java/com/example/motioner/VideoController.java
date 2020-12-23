@@ -20,7 +20,7 @@ public class VideoController {
     @GetMapping("/stream/{filename}/{filetype}")
     public Mono<ResponseEntity<byte[]>> streamVideo(@RequestHeader(value = "Range", required = false) String httpRangeList,
                                                     @PathVariable("filename") String filename,
-                                                    @PathVariable("filetype") String fileType) throws Exception {
+                                                    @PathVariable("filetype") String fileType) {
         return Mono.just(fm.getFile(filename, fileType, httpRangeList));
     }
 }

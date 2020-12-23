@@ -5,7 +5,6 @@ import com.example.motioner.infrastructure.AlarmRepository;
 import com.example.motioner.infrastructure.FileManager;
 import com.example.motioner.presentation.response.Response;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

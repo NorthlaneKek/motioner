@@ -37,6 +37,7 @@ public class MinioFileManager implements FileManager {
             return ResponseEntity.status(HttpStatus.OK)
                     .header("Content-type", "video/" + fileType)
                     .header("Content-Length", String.valueOf(data.length - 1))
+                    .header("Accept-Ranges", "bytes")
                     .body(data);
         } catch (Exception e) {
             e.printStackTrace();
