@@ -40,8 +40,11 @@ public class MinioFileManager implements FileManager {
                     .body(data);
         } catch (Exception e) {
             e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                    .header("Content-type", "video/" + fileType)
+                    .header("Content-length", "0")
+                    .body(new byte[0]);
         }
-        return null;
     }
 
     private byte[] readFile(String filename) throws Exception {
