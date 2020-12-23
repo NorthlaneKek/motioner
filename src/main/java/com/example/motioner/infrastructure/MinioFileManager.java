@@ -24,6 +24,8 @@ public class MinioFileManager implements FileManager {
 
     private final MinioClient client;
 
+    private int filesize;
+
     private final Logger logger = LoggerFactory.getLogger(MinioFileManager.class);
 
     public MinioFileManager(MinioClient mc) {
@@ -31,24 +33,43 @@ public class MinioFileManager implements FileManager {
     }
 
     public ResponseEntity<byte[]> getFile(String filename, String fileType, String range) {
-//        long end = Long.parseLong(range.split("-")[1]);
+        long start = 0L;
+        long end = -1;
+        filesize = 0;
+        byte[] data;
         try {
-            byte[] data = readFile(filename);
-            return ResponseEntity.status(HttpStatus.OK)
-                    .header("Content-type", "video/" + fileType)
-                    .header("Content-Length", String.valueOf(data.length - 1))
-                    .header("Accept-Ranges", "bytes")
-                    .body(data);
+            if (range == null) {
+                data = readFile(filename, start, end);
+                return ResponseEntity.status(HttpStatus.OK)
+                        .header("Content-type", "video/" + fileType)
+                        .header("Content-Length", String.valueOf(filesize - 1))
+//                        .header("Accept-Ranges", "bytes")
+                        .body(data);
+            }
+            String[] ranges = range.split("-");
+            start = Long.parseLong(ranges[0].substring(6));
+            if (ranges.length > 1) {
+                end = Long.parseLong(ranges[1]);
+            }
+
+            if (end > filesize) {
+                end = filesize - 1;
+            }
+            data = readFile(filename, start, end);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                    .header("Content-type", "video/" + fileType)
-                    .header("Content-length", "0")
-                    .body(new byte[0]);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+        String contentLength = String.valueOf((end - start) + 1);
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                .header("Content-Type", "video/" + fileType)
+                .header("Accept-Ranges", "bytes")
+                .header("Content-Length", contentLength)
+                .header("Content-Range", "bytes" + " " + start + "-" + end + "/" + filesize)
+                .body(data);
     }
 
-    private byte[] readFile(String filename) throws Exception {
+    private byte[] readFile(String filename, long start, long end) throws Exception {
         try (InputStream is = client.getObject(
                 GetObjectArgs.builder()
                         .bucket(bucket)
@@ -59,10 +80,17 @@ public class MinioFileManager implements FileManager {
             int nRead;
             while ((nRead = is.read(data, 0, data.length)) != -1) {
                 bufferedOutputStream.write(data, 0, nRead);
+                filesize += nRead;
             }
             bufferedOutputStream.flush();
-            byte[] result = new byte[bufferedOutputStream.size()];
-            System.arraycopy(bufferedOutputStream.toByteArray(), 0, result, 0, result.length);
+            int resultLength;
+            if (end < 0) {
+                resultLength = bufferedOutputStream.size();
+            } else {
+                resultLength = (int) (end - start) + 1;
+            }
+            byte[] result = new byte[resultLength];
+            System.arraycopy(bufferedOutputStream.toByteArray(), (int) start, result, 0, result.length);
             return result;
         }
     }
