@@ -2,26 +2,35 @@ package com.example.motioner.infrastructure;
 
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
+import io.minio.RemoveObjectsArgs;
+import io.minio.Result;
+import io.minio.messages.DeleteError;
+import io.minio.messages.DeleteObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.LinkedList;
+import java.util.List;
 
-//todo: file converter to mp4?
 public class MinioFileManager implements FileManager {
 
-    private MinioClient client;
+    @Value("${minio.bucket}")
+    private String bucket;
 
-    private Logger logger = LoggerFactory.getLogger(MinioFileManager.class);
+    private final MinioClient client;
+
+    private final Logger logger = LoggerFactory.getLogger(MinioFileManager.class);
 
     public MinioFileManager(MinioClient mc) {
         client = mc;
     }
 
-    public ResponseEntity<byte[]> getFile(String filename, String fileType, String range) throws Exception {
+    public ResponseEntity<byte[]> getFile(String filename, String fileType, String range) {
 //        long end = Long.parseLong(range.split("-")[1]);
         try {
             byte[] data = readFile(filename);
@@ -38,7 +47,7 @@ public class MinioFileManager implements FileManager {
     private byte[] readFile(String filename) throws Exception {
         try (InputStream is = client.getObject(
                 GetObjectArgs.builder()
-                        .bucket("raspberrycamera")
+                        .bucket(bucket)
                         .object(filename)
                         .build())) {
             ByteArrayOutputStream bufferedOutputStream = new ByteArrayOutputStream();
@@ -51,6 +60,23 @@ public class MinioFileManager implements FileManager {
             byte[] result = new byte[bufferedOutputStream.size()];
             System.arraycopy(bufferedOutputStream.toByteArray(), 0, result, 0, result.length);
             return result;
+        }
+    }
+
+    public void removeFile(String filename) {
+        List<DeleteObject> objects = new LinkedList<>();
+        objects.add(new DeleteObject(filename));
+        Iterable<Result<DeleteError>> results =
+                client.removeObjects(
+                        RemoveObjectsArgs.builder().bucket(bucket).objects(objects).build());
+        try {
+            for (Result<DeleteError> result : results) {
+                DeleteError error = result.get();
+                System.out.println(
+                        "Error in deleting object " + error.objectName() + "; " + error.message());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
