@@ -3,7 +3,6 @@ package com.example.motioner;
 import com.example.motioner.infrastructure.FileManager;
 import com.example.motioner.infrastructure.MinioFileManager;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
@@ -23,4 +22,11 @@ public class VideoController {
                                                     @PathVariable("filetype") String fileType) {
         return Mono.just(fm.getFile(filename, fileType, httpRangeList));
     }
+
+//    @GetMapping("/stream/disc/{filename}/{filetype}")
+//    public Mono<ResponseEntity<byte[]>> streamVideoFromDisk(@RequestHeader(value = "Range", required = false) String httpRangeList,
+//                                                    @PathVariable("filename") String filename,
+//                                                    @PathVariable("filetype") String fileType) {
+//        return Mono.just(fm.getFileFromDisc(filename, fileType, httpRangeList));
+//    }
 }

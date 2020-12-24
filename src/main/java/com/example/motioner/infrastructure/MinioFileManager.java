@@ -13,9 +13,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 
 public class MinioFileManager implements FileManager {
 
@@ -27,6 +34,8 @@ public class MinioFileManager implements FileManager {
     private int filesize;
 
     private final Logger logger = LoggerFactory.getLogger(MinioFileManager.class);
+
+    private final String VIDEO = "/video";
 
     public MinioFileManager(MinioClient mc) {
         client = mc;
@@ -54,24 +63,19 @@ public class MinioFileManager implements FileManager {
                         .header("Last-Modified", "Tue, 04 Sep 2018 18:39:18 GMT")
                         .body(data);
             } else {
-                String[] ranges = range.split("-");
-                start = Long.parseLong(ranges[0].substring(6));
-                if (ranges.length > 1) {
-                    end = Long.parseLong(ranges[1]);
-                } else {
-                    end = filesize;
-                }
-
-                if (filesize < end) {
-                    end = filesize;
-                }
-
+                long[] ranges = parseRanges(range);
+                start = ranges[0];
+                end = ranges[1];
                 data = readFile(filename, start, end);
+                long rangeEnd = end;
+                if (end == -1) {
+                    rangeEnd = filesize - 1;
+                }
                 return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                         .header("Content-Type", "video/" + fileType)
                         .header("Accept-Ranges", "bytes")
                         .header("Content-Length", String.valueOf(data.length))
-                        .header("Content-Range", "bytes" + " " + start + "-" + end + "/" + filesize)
+                        .header("Content-Range", "bytes" + " " + start + "-" + rangeEnd + "/" + filesize)
                         .body(data);
             }
 
@@ -81,23 +85,16 @@ public class MinioFileManager implements FileManager {
         }
     }
 
-    private byte[] readFile(String filename) throws Exception {
-        try (InputStream is = client.getObject(
-                GetObjectArgs.builder()
-                        .bucket(bucket)
-                        .object(filename)
-                        .build())) {
-            ByteArrayOutputStream bufferedOutputStream = new ByteArrayOutputStream();
-            byte[] data = new byte[1024];
-            int nRead;
-            while ((nRead = is.read(data, 0, data.length)) != -1) {
-                bufferedOutputStream.write(data, 0, nRead);
-            }
-            bufferedOutputStream.flush();
-            byte[] result = new byte[bufferedOutputStream.size()];
-            System.arraycopy(bufferedOutputStream.toByteArray(), 0, result, 0, result.length);
-            return result;
+    private long[] parseRanges(String stringRanges) {
+        String[] ranges = stringRanges.split("-");
+        long start = Long.parseLong(ranges[0].substring(6));
+        long end;
+        if (ranges.length > 1) {
+            end = Long.parseLong(ranges[1]);
+        } else {
+            end = -1;
         }
+        return new long[] {start, end};
     }
 
     private byte[] readFile(String filename, long start, long end) throws Exception {
@@ -113,13 +110,14 @@ public class MinioFileManager implements FileManager {
                 bufferedOutputStream.write(data, 0, nRead);
                 filesize += nRead;
             }
-            bufferedOutputStream.flush();
+
             int resultLength;
-            if (end == -1) {
-                resultLength = bufferedOutputStream.size();
+            if (filesize < end || end == -1) {
+                resultLength = filesize - (int) start;
             } else {
                 resultLength = (int) (end - start) + 1;
             }
+            bufferedOutputStream.flush();
             byte[] result = new byte[resultLength];
             System.arraycopy(bufferedOutputStream.toByteArray(), (int) start, result, 0, result.length);
             return result;
