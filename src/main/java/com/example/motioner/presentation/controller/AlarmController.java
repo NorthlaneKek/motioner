@@ -1,4 +1,4 @@
-package com.example.motioner.controller;
+`package com.example.motioner.presentation.controller;
 
 import com.example.motioner.domain.entity.Alarm;
 import com.example.motioner.infrastructure.AlarmRepository;

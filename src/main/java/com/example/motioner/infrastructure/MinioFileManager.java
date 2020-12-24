@@ -1,5 +1,8 @@
 package com.example.motioner.infrastructure;
 
+import com.example.motioner.domain.entity.Video;
+import com.example.motioner.domain.valueObject.VideoRange;
+import com.example.motioner.presentation.VideoResponseFactory;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.RemoveObjectsArgs;
@@ -22,49 +25,32 @@ public class MinioFileManager implements FileManager {
 
     private final MinioClient client;
 
-    private final VideoResponseFactory rf;
-
-    private int filesize;
-
-    public MinioFileManager(MinioClient mc, VideoResponseFactory rf) {
+    public MinioFileManager(MinioClient mc) {
         client = mc;
-        this.rf = rf;
     }
 
-    public ResponseEntity<byte[]> getFile(String filename, String fileType, String range) {
-        filesize = 0;
-        byte[] data;
-        try {
-            if (range == null) {
-                data = readFile(filename, 0, -1);
-                return rf.toFullResponse(data);
-            } else {
-                long[] ranges = parseRanges(range);
-                long start = ranges[0];
-                long end = ranges[1];
-                data = readFile(filename, start, end);
-                return rf.toPartialResponse(data, range, filesize);
-            }
+    public Video getVideo(String filename, VideoRange range) throws Exception {
+        byte[] data = readFile(filename);
+        Video video = new Video(data);
+        return slice(video, range);
+    }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    private Video slice(Video video, VideoRange range) {
+        if (range.wholeVideo()) {
+            return video;
         }
-    }
-
-    private long[] parseRanges(String stringRanges) {
-        String[] ranges = stringRanges.split("-");
-        long start = Long.parseLong(ranges[0].substring(6));
-        long end;
-        if (ranges.length > 1) {
-            end = Long.parseLong(ranges[1]);
+        int finalSize;
+        if (video.shorterThan(range.getEnd()) || range.withNoEnd()) {
+            finalSize = video.getSize() - (int) range.getStart();
         } else {
-            end = -1;
+            finalSize = (int) range.difference();
         }
-        return new long[] {start, end};
+        byte[] result = new byte[finalSize];
+        System.arraycopy(video.asArray(), (int) range.getStart(), result, 0, result.length);
+        return new Video(result, false, video.getSize());
     }
 
-    private byte[] readFile(String filename, long start, long end) throws Exception {
+    private byte[] readFile(String filename) throws Exception {
         try (InputStream is = client.getObject(
                 GetObjectArgs.builder()
                         .bucket(bucket)
@@ -75,18 +61,11 @@ public class MinioFileManager implements FileManager {
             int nRead;
             while ((nRead = is.read(data, 0, data.length)) != -1) {
                 bufferedOutputStream.write(data, 0, nRead);
-                filesize += nRead;
             }
-
-            int resultLength;
-            if (filesize < end || end == -1) {
-                resultLength = filesize - (int) start;
-            } else {
-                resultLength = (int) (end - start) + 1;
-            }
+            int resultLength = bufferedOutputStream.size();
             bufferedOutputStream.flush();
             byte[] result = new byte[resultLength];
-            System.arraycopy(bufferedOutputStream.toByteArray(), (int) start, result, 0, result.length);
+            System.arraycopy(bufferedOutputStream.toByteArray(), (int) 0, result, 0, result.length);
             return result;
         }
     }
