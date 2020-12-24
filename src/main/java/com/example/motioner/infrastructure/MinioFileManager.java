@@ -33,11 +33,20 @@ public class MinioFileManager implements FileManager {
     public ResponseEntity<byte[]> getFile(String filename, String fileType, String range) {
 //        long end = Long.parseLong(range.split("-")[1]);
         try {
-            byte[] data = readFile(filename);
+            byte[] data = readFile(filename, 0, -1);
             return ResponseEntity.status(HttpStatus.OK)
                     .header("Content-type", "video/" + fileType)
                     .header("Content-Length", String.valueOf(data.length - 1))
                     .header("Accept-Ranges", "bytes")
+
+                    .header("X-Cache", "Hit from cloudfront")
+                    .header("Via", "1.1 6da67a85460a493ba4aab4d94239d022.cloudfront.net (CloudFront)")
+                    .header("X-Amz-Cf-Pop", "HEL50-C1")
+                    .header("X-Amz-Cf-Id", "JZJ8X_Gy8wHtngEr-WHg8M0AC8lAS6WQ_JNVYkTrZQQIl-aLUbhYvg==")
+                    .header("Age", "46569")
+                    .header("Server", "AmazonS3")
+                    .header("ETag", "\"d2517ca1a5d4feee5dc3732cddb71949\"")
+                    .header("Last-Modified", "Tue, 04 Sep 2018 18:39:18 GMT")
                     .body(data);
         } catch (Exception e) {
             e.printStackTrace();
@@ -63,6 +72,31 @@ public class MinioFileManager implements FileManager {
             bufferedOutputStream.flush();
             byte[] result = new byte[bufferedOutputStream.size()];
             System.arraycopy(bufferedOutputStream.toByteArray(), 0, result, 0, result.length);
+            return result;
+        }
+    }
+
+    private byte[] readFile(String filename, long start, long end) throws Exception {
+        try (InputStream is = client.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(filename)
+                        .build())) {
+            ByteArrayOutputStream bufferedOutputStream = new ByteArrayOutputStream();
+            byte[] data = new byte[1024];
+            int nRead;
+            while ((nRead = is.read(data, 0, data.length)) != -1) {
+                bufferedOutputStream.write(data, 0, nRead);
+            }
+            bufferedOutputStream.flush();
+            int resultLength;
+            if (end == -1) {
+                resultLength = bufferedOutputStream.size();
+            } else {
+                resultLength = (int) (end - start) + 1;
+            }
+            byte[] result = new byte[resultLength];
+            System.arraycopy(bufferedOutputStream.toByteArray(), (int) start, result, 0, result.length);
             return result;
         }
     }
