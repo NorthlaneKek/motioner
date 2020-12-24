@@ -24,6 +24,8 @@ public class MinioFileManager implements FileManager {
 
     private final MinioClient client;
 
+    private int filesize;
+
     private final Logger logger = LoggerFactory.getLogger(MinioFileManager.class);
 
     public MinioFileManager(MinioClient mc) {
@@ -31,29 +33,51 @@ public class MinioFileManager implements FileManager {
     }
 
     public ResponseEntity<byte[]> getFile(String filename, String fileType, String range) {
-//        long end = Long.parseLong(range.split("-")[1]);
+        long start = 0;
+        long end;
+        filesize = 0;
+        byte[] data;
         try {
-            byte[] data = readFile(filename, 0, -1);
-            return ResponseEntity.status(HttpStatus.OK)
-                    .header("Content-type", "video/" + fileType)
-                    .header("Content-Length", String.valueOf(data.length - 1))
-                    .header("Accept-Ranges", "bytes")
+            if (range == null) {
+                data = readFile(filename, 0, -1);
+                return ResponseEntity.status(HttpStatus.OK)
+                        .header("Content-type", "video/" + fileType)
+                        .header("Content-Length", String.valueOf(data.length))
+                        .header("Accept-Ranges", "bytes")
 
-                    .header("X-Cache", "Hit from cloudfront")
-                    .header("Via", "1.1 6da67a85460a493ba4aab4d94239d022.cloudfront.net (CloudFront)")
-                    .header("X-Amz-Cf-Pop", "HEL50-C1")
-                    .header("X-Amz-Cf-Id", "JZJ8X_Gy8wHtngEr-WHg8M0AC8lAS6WQ_JNVYkTrZQQIl-aLUbhYvg==")
-                    .header("Age", "46569")
-                    .header("Server", "AmazonS3")
-                    .header("ETag", "\"d2517ca1a5d4feee5dc3732cddb71949\"")
-                    .header("Last-Modified", "Tue, 04 Sep 2018 18:39:18 GMT")
-                    .body(data);
+                        .header("X-Cache", "Hit from cloudfront")
+                        .header("Via", "1.1 6da67a85460a493ba4aab4d94239d022.cloudfront.net (CloudFront)")
+                        .header("X-Amz-Cf-Pop", "HEL50-C1")
+                        .header("X-Amz-Cf-Id", "JZJ8X_Gy8wHtngEr-WHg8M0AC8lAS6WQ_JNVYkTrZQQIl-aLUbhYvg==")
+                        .header("Age", "46569")
+                        .header("ETag", "\"d2517ca1a5d4feee5dc3732cddb71949\"")
+                        .header("Last-Modified", "Tue, 04 Sep 2018 18:39:18 GMT")
+                        .body(data);
+            } else {
+                String[] ranges = range.split("-");
+                start = Long.parseLong(ranges[0].substring(6));
+                if (ranges.length > 1) {
+                    end = Long.parseLong(ranges[1]);
+                } else {
+                    end = filesize;
+                }
+
+                if (filesize < end) {
+                    end = filesize;
+                }
+
+                data = readFile(filename, start, end);
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .header("Content-Type", "video/" + fileType)
+                        .header("Accept-Ranges", "bytes")
+                        .header("Content-Length", String.valueOf(data.length))
+                        .header("Content-Range", "bytes" + " " + start + "-" + end + "/" + filesize)
+                        .body(data);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                    .header("Content-type", "video/" + fileType)
-                    .header("Content-length", "0")
-                    .body(new byte[0]);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -87,6 +111,7 @@ public class MinioFileManager implements FileManager {
             int nRead;
             while ((nRead = is.read(data, 0, data.length)) != -1) {
                 bufferedOutputStream.write(data, 0, nRead);
+                filesize += nRead;
             }
             bufferedOutputStream.flush();
             int resultLength;
