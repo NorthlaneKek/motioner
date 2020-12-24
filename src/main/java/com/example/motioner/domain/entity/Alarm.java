@@ -20,19 +20,23 @@ public class Alarm {
     @Column(nullable = false)
     private Long timestamp;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean seen;
+
     @ManyToOne
     @JoinColumn(name = "device_id", nullable = false)
     private Device device;
 
     public Alarm() {}
 
-    public Alarm(UUID uuid, String place, String filename, String type, Device device, Long timestamp) {
+    public Alarm(UUID uuid, String place, String filename, String type, Device device, Long timestamp, Boolean seen) {
         this.id = uuid;
         this.place = place;
         this.filename = filename;
         this.type = type;
         this.device = device;
         this.timestamp = timestamp;
+        this.seen = seen;
     }
 
     public UUID getId() {
@@ -57,6 +61,14 @@ public class Alarm {
 
     public Device getDevice() {
         return device;
+    }
+
+    public Boolean isSeen() {
+        return seen;
+    }
+
+    public void seen() {
+        this.seen = true;
     }
 
     @Override

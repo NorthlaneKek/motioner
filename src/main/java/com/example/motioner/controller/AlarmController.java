@@ -1,4 +1,4 @@
-package com.example.motioner;
+package com.example.motioner.controller;
 
 import com.example.motioner.domain.entity.Alarm;
 import com.example.motioner.infrastructure.AlarmRepository;
@@ -26,7 +26,7 @@ public class AlarmController {
 
     @GetMapping("/alarms")
     public List<Alarm> index() {
-        return repository.findAll();
+        return repository.findAllByOrderByTimestampDesc();
     }
 
     @PostMapping("/alarms/create")

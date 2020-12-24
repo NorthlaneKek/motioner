@@ -1,4 +1,4 @@
-package com.example.motioner;
+package com.example.motioner.controller;
 
 import com.example.motioner.domain.entity.Device;
 import com.example.motioner.infrastructure.DeviceRepository;

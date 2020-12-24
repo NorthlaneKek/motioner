@@ -48,7 +48,8 @@ public class MqttMessageHandler implements MessageHandler {
                 parsedMessage.get("filename"),
                 parsedMessage.get("type"),
                 device,
-                occurredAt
+                occurredAt,
+                false
         );
         alarmRepository.saveAndFlush(alarm);
     }

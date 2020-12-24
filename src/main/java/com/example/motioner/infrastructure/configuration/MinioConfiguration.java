@@ -1,6 +1,7 @@
 package com.example.motioner.infrastructure.configuration;
 
 import com.example.motioner.infrastructure.MinioFileManager;
+import com.example.motioner.infrastructure.VideoResponseFactory;
 import io.minio.MinioClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,7 +34,12 @@ public class MinioConfiguration {
     }
 
     @Bean
-    public MinioFileManager getManager(MinioClient client) {
-        return new MinioFileManager(client);
+    public VideoResponseFactory getResponseFactory() {
+        return new VideoResponseFactory();
+    }
+
+    @Bean
+    public MinioFileManager getManager(MinioClient client, VideoResponseFactory rf) {
+        return new MinioFileManager(client, rf);
     }
 }
