@@ -31,25 +31,6 @@ public class VideoController {
         this.rf = rf;
     }
 
-//    @GetMapping("/stream/{filename}/{filetype}")
-//    public Mono<ResponseEntity<byte[]>> streamVideo(@RequestHeader(value = "Range", required = false) String httpRangeList,
-//                                                    @PathVariable("filename") String filename,
-//                                                    @PathVariable("filetype") String fileType) throws Exception {
-//        ResponseEntity<byte[]> videoResponse = fm.getFile(filename, fileType, httpRangeList);
-//        System.out.println("Range: " + httpRangeList);
-//        Video video = fm.getVideo(filename, VideoRange.of(httpRangeList));
-//        VideoResponseFactory factory = new VideoResponseFactory();
-//        ResponseEntity<byte[]> response = factory.toResponse(video, httpRangeList);
-//        Optional<Alarm> stored = repository.findAlarmByFilename(filename);
-//        if (stored.isPresent()) {
-//            Alarm alarm = stored.get();
-//            alarm.seen();
-//            repository.saveAndFlush(alarm);
-//        }
-//        System.out.println("Old : " + videoResponse.getHeaders().toString());
-//        return Mono.just(videoResponse);
-//    }
-
     @GetMapping("/stream/{filename}/{filetype}")
     public Mono<ResponseEntity<byte[]>> streamVideo(@RequestHeader(value = "Range", required = false) String httpRangeList,
                                                     @PathVariable("filename") String filename,
@@ -62,6 +43,7 @@ public class VideoController {
             alarm.seen();
             repository.saveAndFlush(alarm);
         }
+        System.out.println("Headers : " + response.getHeaders());
         return Mono.just(response);
     }
 
